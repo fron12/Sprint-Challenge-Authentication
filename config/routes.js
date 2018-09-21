@@ -1,7 +1,9 @@
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const db = require('../database/dbConfig.js')
+
+const db = require('../database/dbConfig.js');
 const { authenticate } = require('./middlewares');
 
 module.exports = server => {
@@ -12,6 +14,8 @@ module.exports = server => {
   server.get('/api/users', getUsers);
 };
 
+const secret = "Green Swirl Cup";
+
 function generateToken(user) {
   const payload = {
     username: user.username
@@ -20,7 +24,7 @@ function generateToken(user) {
     expiresIn: '1h',
     jwtid: '2468'
   };
-  return(token = jwt.sign(payload, secret, options));
+  return (token = jwt.sign(payload, secret, options));
 }
 
 function serverCheck(req, res) {
@@ -31,15 +35,15 @@ function getUsers(req, res) {
   db('users')
     .select('id', 'username', 'password')
     .then(users => {
-      res.status(200).json(users)
+      res.status(200).json(users);
     })
-    .catch(err => res.status(500).json({errorMsg: 'Could not get users.'}))
+    .catch(err => res.status(500).json({ errorMsg: 'Could not get users.' }));
 }
 
 function register(req, res) {
   // implement user registration
   const creds = req.body;
-  const hash = bcrypt.hashSync(creds.password, 16);
+  const hash = bcrypt.hashSync(creds.password, 10);
   creds.password = hash;
 
   db('users')
@@ -48,21 +52,35 @@ function register(req, res) {
       const id = ids[0];
       // find user using id
       db('users')
-        .where({id})
+        .where({ id })
         .first()
         .then(user => {
           const token = generateToken(user);
-          res.status(201).json({id: user.id, token})
+          res.status(201).json({ id: user.id, token });
         })
         .catch(err => res.status(500).send(err));
-    })
+    });
 }
 
 function login(req, res) {
   // implement user login
+  const creds = req.body;
+
+  db('users')
+    .where({ username: creds.username })
+    .first()
+    .then(user => {
+      if (user && bcrypt.compareSync(creds.password, user.password)) {
+        const token = generateToken(user);
+        res.status(200).json({ token });
+      } else {
+        res.status(401).json({ message: 'User not recognized.' });
+      }
+    })
+    .catch(err => res.status(500).send(err));
 }
 
-function getJokes(req, res) {
+function getJokes(req, authenticate, res) {
   axios
     .get(
       'https://08ad1pao69.execute-api.us-east-1.amazonaws.com/dev/random_ten'
