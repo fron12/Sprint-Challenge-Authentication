@@ -1,7 +1,7 @@
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const jwtKey = require('../_secrets/keys').jwtKey;
 
 const db = require('../database/dbConfig.js');
 const { authenticate } = require('./middlewares');
@@ -14,8 +14,6 @@ module.exports = server => {
   server.get('/api/users', getUsers);
 };
 
-const secret = "Green Swirl Cup";
-
 function generateToken(user) {
   const payload = {
     username: user.username
@@ -24,7 +22,7 @@ function generateToken(user) {
     expiresIn: '1h',
     jwtid: '2468'
   };
-  return (token = jwt.sign(payload, secret, options));
+  return (token = jwt.sign(payload, jwtKey, options));
 }
 
 function serverCheck(req, res) {
@@ -80,7 +78,7 @@ function login(req, res) {
     .catch(err => res.status(500).send(err));
 }
 
-function getJokes(req, authenticate, res) {
+function getJokes(req, res) {
   axios
     .get(
       'https://08ad1pao69.execute-api.us-east-1.amazonaws.com/dev/random_ten'
